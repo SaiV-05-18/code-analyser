@@ -103,6 +103,7 @@ export default function Analyze() {
   const [status, setStatus] = useState('initial'); // 'initial' | 'analyzing' | 'completed'
   const [result, setResult] = useState(null);
   const [isStale, setIsStale] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleLanguageChange = (newLang) => {
     setLanguage(newLang);
@@ -111,18 +112,23 @@ export default function Analyze() {
     setCode(SAMPLE_CODES[newLang] || '');
     setResult(null);
     setIsStale(false);
+    setError(null);
   };
 
   const handleResetSample = () => {
     setCode(SAMPLE_CODES[language] || '');
     setResult(null);
     setIsStale(false);
+    setError(null);
   };
 
   const handleCodeChange = (newCode) => {
     setCode(newCode);
     if (result) {
       setIsStale(true);
+    }
+    if (error) {
+      setError(null);
     }
   };
 
@@ -159,6 +165,7 @@ export default function Analyze() {
   const triggerAnalysis = async (codeToAnalyze = code, langToAnalyze = language, fileToSave = filename) => {
     setStatus('analyzing');
     setIsStale(false);
+    setError(null);
 
     try {
       const analysisResult = await analyzeCode(codeToAnalyze, langToAnalyze);
@@ -183,6 +190,7 @@ export default function Analyze() {
       });
     } catch (err) {
       console.error(err);
+      setError(err.message || 'Analysis failed.');
       setStatus('initial');
     }
   };
@@ -283,6 +291,23 @@ export default function Analyze() {
           </button>
         </div>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="flex items-center justify-between p-3.5 bg-rose-500/10 border border-rose-300 text-rose-900 text-xs rounded-2xl animate-in fade-in">
+          <div className="flex items-center space-x-2.5">
+            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => setError(null)} 
+            className="text-rose-500 hover:text-rose-700 font-bold px-2 py-0.5 rounded cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Stale Warning Indicator */}
       {isStale && (
