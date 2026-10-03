@@ -140,7 +140,7 @@ export default function Analyze() {
     else if (ext === 'java') detectedLang = 'Java';
     else if (ext === 'c') detectedLang = 'C';
     else if (ext === 'cpp' || ext === 'cc' || ext === 'cxx') detectedLang = 'C++';
-    
+
     setLanguage(detectedLang);
 
     const reader = new FileReader();
