@@ -16,7 +16,7 @@
   * {
     border-color: #e2e8f0;
   }
-  
+
   body {
     background: #f8fafc;
     color: #0f172a;
@@ -25,7 +25,8 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  code, pre {
+  code,
+  pre {
     font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 }
@@ -91,8 +92,17 @@
 
 /* Shimmer animation for live indicators */
 @keyframes pulse-subtle {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.96); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: scale(0.96);
+  }
 }
 
 .animate-pulse-subtle {

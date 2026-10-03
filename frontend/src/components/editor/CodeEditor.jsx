@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { FileCode, Loader2, Copy, Check, Trash2, RotateCcw } from 'lucide-react';
 
-export default function CodeEditor({ 
-  code, 
-  onChange, 
-  language = 'python', 
+export default function CodeEditor({
+  code,
+  onChange,
+  language = 'python',
   filename = 'main.py',
   onResetSample
 }) {

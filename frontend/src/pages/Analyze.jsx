@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Upload, Check, RefreshCw, AlertTriangle, FileCode, Sparkles } from 'lucide-react';
+import { Play, Upload, Check, RefreshCw, AlertTriangle, FileCode } from 'lucide-react';
 import CodeEditor from '../components/editor/CodeEditor';
 import RiskCards from '../components/dashboard/RiskCard';
 import MetricsGrid from '../components/dashboard/MetricsGrid';
@@ -212,8 +212,7 @@ export default function Analyze() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Analyze Source Code</h1>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-              <Sparkles className="w-2.5 h-2.5 mr-1 text-indigo-500" />
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
               AST & ML Mode
             </span>
           </div>
@@ -235,7 +234,7 @@ export default function Analyze() {
               id="language-select"
               value={language}
               onChange={(e) => handleLanguageChange(e.target.value)}
-              className="bg-slate-50 border border-slate-300 text-slate-800 text-xs font-semibold rounded-xl px-3.5 py-2 outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer shadow-2xs"
+              className="bg-white border border-slate-200 text-slate-800 text-xs font-semibold rounded-full px-4 py-2 outline-hidden focus:ring-2 focus:ring-black cursor-pointer shadow-2xs"
             >
               <option value="Python">Python</option>
               <option value="Java">Java</option>
@@ -246,7 +245,7 @@ export default function Analyze() {
 
           {/* File Upload Button */}
           <div>
-            <label className="cursor-pointer inline-flex items-center space-x-2 px-3.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl transition-all border border-slate-300 shadow-2xs">
+            <label className="cursor-pointer inline-flex items-center space-x-2 px-4 py-2 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold rounded-full transition-all border border-slate-200 shadow-2xs">
               <Upload className="w-3.5 h-3.5 text-slate-500" />
               <span>Upload File</span>
               <input
@@ -264,12 +263,12 @@ export default function Analyze() {
           <button
             onClick={() => triggerAnalysis()}
             disabled={status === 'analyzing'}
-            className={`inline-flex items-center space-x-2.5 px-6 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all duration-200 cursor-pointer ${
+            className={`inline-flex items-center space-x-2 px-7 py-3 rounded-full text-xs sm:text-sm font-semibold shadow-md shadow-black/10 transition-all duration-200 cursor-pointer ${
               status === 'analyzing'
-                ? 'bg-blue-400 text-white cursor-not-allowed shadow-none'
+                ? 'bg-slate-400 text-white cursor-not-allowed shadow-none'
                 : status === 'completed'
                 ? 'bg-emerald-600 text-white shadow-emerald-500/25'
-                : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-500/30 hover:shadow-blue-500/50 hover:-translate-y-0.5'
+                : 'bg-black hover:bg-slate-800 text-white hover:-translate-y-0.5'
             }`}
           >
             {status === 'analyzing' ? (
@@ -299,9 +298,9 @@ export default function Analyze() {
             <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
             <span>{error}</span>
           </div>
-          <button 
-            type="button" 
-            onClick={() => setError(null)} 
+          <button
+            type="button"
+            onClick={() => setError(null)}
             className="text-rose-500 hover:text-rose-700 font-bold px-2 py-0.5 rounded cursor-pointer"
           >
             ✕
@@ -336,7 +335,7 @@ export default function Analyze() {
               <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">Analysis Dashboard</h2>
               <p className="text-xs text-slate-500">Comprehensive inspection findings for {filename}</p>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
               Scanned Successfully
             </span>
           </div>
@@ -360,13 +359,13 @@ export default function Analyze() {
           <PredictionResult prediction={result.prediction} />
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-10 text-center shadow-xs">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center mx-auto mb-4 border border-indigo-500/20">
-            <FileCode className="w-7 h-7" />
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-xs">
+          <div className="w-14 h-14 rounded-3xl bg-black text-white flex items-center justify-center mx-auto mb-4 shadow-md shadow-black/10">
+            <FileCode className="w-7 h-7 text-white" />
           </div>
           <h3 className="text-base font-bold text-slate-900">Ready to Analyze</h3>
           <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mt-1.5 leading-relaxed">
-            Click the <strong className="text-blue-600 font-bold">Run Analysis</strong> button above to extract code metrics, detect vulnerabilities, and compute ML defect risk.
+            Click the <strong className="text-slate-900 font-bold">Run Analysis</strong> button above to extract code metrics, detect vulnerabilities, and compute ML defect risk.
           </p>
         </div>
       )}

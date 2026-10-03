@@ -45,7 +45,7 @@ export default function RiskCards({ result }) {
           <span className="text-xs text-slate-500 font-medium">Probability</span>
         </div>
         <div className="mt-3 w-full bg-slate-100 rounded-full h-2 overflow-hidden shadow-inner">
-          <div 
+          <div
             className={clsx('h-2 rounded-full transition-all duration-700 ease-out', riskBarGradient)}
             style={{ width: `${prediction.probability}%` }}
           />
@@ -57,13 +57,13 @@ export default function RiskCards({ result }) {
       </div>
 
       {/* 2. Maintainability Card */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 group">
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 group">
         <div className="flex items-center justify-between mb-3">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            <Award className="w-3.5 h-3.5 text-blue-500" />
+            <Award className="w-3.5 h-3.5 text-slate-700" />
             Maintainability
           </span>
-          <span className="w-7 h-7 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-extrabold text-xs flex items-center justify-center shadow-xs">
+          <span className="w-7 h-7 rounded-xl bg-black text-white font-extrabold text-xs flex items-center justify-center shadow-xs">
             {metrics.maintainabilityGrade}
           </span>
         </div>
@@ -73,15 +73,15 @@ export default function RiskCards({ result }) {
           </span>
           <span className="text-xs text-slate-400 font-medium">/ 100</span>
         </div>
-        <div className="mt-3 w-full bg-slate-100 rounded-full h-2 overflow-hidden shadow-inner">
-          <div 
-            className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-700 ease-out"
+        <div className="mt-3 w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+          <div
+            className="h-2 rounded-full bg-black transition-all duration-700 ease-out"
             style={{ width: `${Math.min(100, Math.max(0, metrics.maintainabilityIndex))}%` }}
           />
         </div>
         <p className="mt-2.5 text-[11px] text-slate-500 flex items-center justify-between font-medium">
           <span>Status Rating</span>
-          <span className="font-bold text-blue-600">{metrics.maintainabilityRating}</span>
+          <span className="font-bold text-slate-900">{metrics.maintainabilityRating}</span>
         </p>
       </div>
 
@@ -95,8 +95,8 @@ export default function RiskCards({ result }) {
           <span className={clsx(
             'text-xs font-bold px-2.5 py-0.5 rounded-full border shadow-2xs',
             metrics.complexityRating === 'High' ? 'bg-rose-500/15 text-rose-700 border-rose-300' :
-            metrics.complexityRating === 'Medium' ? 'bg-amber-500/15 text-amber-700 border-amber-300' :
-            'bg-emerald-500/15 text-emerald-700 border-emerald-300'
+              metrics.complexityRating === 'Medium' ? 'bg-amber-500/15 text-amber-700 border-amber-300' :
+                'bg-emerald-500/15 text-emerald-700 border-emerald-300'
           )}>
             {metrics.complexityRating}
           </span>
@@ -108,12 +108,12 @@ export default function RiskCards({ result }) {
           <span className="text-xs text-slate-400 font-medium">Cyclomatic index</span>
         </div>
         <div className="mt-3 w-full bg-slate-100 rounded-full h-2 overflow-hidden shadow-inner">
-          <div 
+          <div
             className={clsx(
               'h-2 rounded-full transition-all duration-700 ease-out',
               metrics.complexityRating === 'High' ? 'bg-gradient-to-r from-rose-500 to-red-600' :
-              metrics.complexityRating === 'Medium' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
-              'bg-gradient-to-r from-emerald-400 to-teal-500'
+                metrics.complexityRating === 'Medium' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
+                  'bg-gradient-to-r from-emerald-400 to-teal-500'
             )}
             style={{ width: `${Math.min(100, (metrics.cyclomaticComplexity / 20) * 100)}%` }}
           />
@@ -145,7 +145,7 @@ export default function RiskCards({ result }) {
           <span className="text-xs text-slate-400 font-medium">Vulnerabilities</span>
         </div>
         <div className="mt-3 w-full bg-slate-100 rounded-full h-2 overflow-hidden shadow-inner">
-          <div 
+          <div
             className={clsx(
               'h-2 rounded-full transition-all duration-700 ease-out',
               securityIssues.length > 0 ? 'bg-gradient-to-r from-rose-500 to-red-600' : 'bg-gradient-to-r from-emerald-400 to-teal-500'

@@ -45,8 +45,8 @@ export default function MetricsGrid({ metrics }) {
             <div className={clsx(
               'w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border',
               metrics.complexityRating === 'High' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
-              metrics.complexityRating === 'Medium' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-              'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                metrics.complexityRating === 'Medium' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                  'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
             )}>
               <GitBranch className="w-5 h-5" />
             </div>
@@ -57,8 +57,8 @@ export default function MetricsGrid({ metrics }) {
                 <span className={clsx(
                   'text-[10px] font-bold px-2 py-0.5 rounded-full border',
                   metrics.complexityRating === 'High' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                  metrics.complexityRating === 'Medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                  'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    metrics.complexityRating === 'Medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                      'bg-emerald-50 text-emerald-700 border-emerald-200'
                 )}>
                   {metrics.complexityRating}
                 </span>

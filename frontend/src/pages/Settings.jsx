@@ -37,8 +37,8 @@ export default function Settings() {
         {/* Analysis Preferences */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-xs">
           <div className="flex items-center space-x-3 pb-4 mb-5 border-b border-slate-100">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Sliders className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-xl bg-black text-white flex items-center justify-center shadow-xs">
+              <Sliders className="w-4 h-4" />
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900">Analysis Options</h2>
@@ -56,7 +56,7 @@ export default function Settings() {
               <select
                 value={settings.defaultLanguage || 'Python'}
                 onChange={(e) => setSettings({ ...settings, defaultLanguage: e.target.value })}
-                className="bg-slate-50 border border-slate-300 text-slate-800 text-xs font-semibold rounded-xl px-3.5 py-2 outline-hidden focus:ring-2 focus:ring-blue-500 w-full sm:w-48 cursor-pointer shadow-2xs"
+                className="bg-white border border-slate-200 text-slate-800 text-xs font-semibold rounded-full px-4 py-2 outline-hidden focus:ring-2 focus:ring-black w-full sm:w-48 cursor-pointer shadow-2xs"
               >
                 <option value="Python">Python</option>
                 <option value="Java">Java</option>
@@ -78,7 +78,7 @@ export default function Settings() {
                   onChange={(e) => setSettings({ ...settings, autoRunOnUpload: e.target.checked })}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
               </label>
             </div>
 
@@ -95,7 +95,7 @@ export default function Settings() {
                   onChange={(e) => setSettings({ ...settings, showRecommendations: e.target.checked })}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
               </label>
             </div>
           </div>
@@ -104,8 +104,8 @@ export default function Settings() {
         {/* Engine Pipeline Info */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-xs">
           <div className="flex items-center space-x-3 pb-4 mb-4 border-b border-slate-100">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Shield className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-xl bg-black text-white flex items-center justify-center shadow-xs">
+              <Shield className="w-4 h-4" />
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900">Engine Configuration</h2>
@@ -114,11 +114,11 @@ export default function Settings() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
               <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">AST Static Parser</span>
               <p className="font-bold text-slate-800 mt-1">Radon AST + Bandit Security</p>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
               <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Inference Engine</span>
               <p className="font-bold text-slate-800 mt-1">XGBoost & RandomForest Ensemble</p>
             </div>
@@ -128,7 +128,7 @@ export default function Settings() {
         {/* Save & Feedback Toolbar */}
         <div className="flex items-center justify-between pt-2">
           {savedNotification ? (
-            <div className="flex items-center space-x-2 text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 animate-in fade-in">
+            <div className="flex items-center space-x-2 text-xs font-bold text-emerald-700 bg-emerald-50 px-3.5 py-2 rounded-full border border-emerald-200 animate-in fade-in">
               <CheckCircle2 className="w-4 h-4" />
               <span>Settings saved successfully!</span>
             </div>
@@ -138,7 +138,7 @@ export default function Settings() {
 
           <button
             type="submit"
-            className="inline-flex items-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/25 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
+            className="inline-flex items-center space-x-2 px-7 py-3 bg-black hover:bg-slate-800 text-white rounded-full text-xs sm:text-sm font-semibold shadow-md shadow-black/10 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
           >
             <Save className="w-4 h-4" />
             <span>Save Preferences</span>
