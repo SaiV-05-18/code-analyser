@@ -9,6 +9,7 @@
     ".",
     "backend",
     "backend/venv/lib/python3.14/site-packages",
+    "backend/venv/lib64/python3.14/site-packages",
     "/home/SaiV-05-18/.local/lib/python3.14/site-packages"
   ]
 }
