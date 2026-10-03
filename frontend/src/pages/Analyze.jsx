@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Play, Upload, Check, RefreshCw, AlertTriangle, FileCode } from 'lucide-react';
 import CodeEditor from '../components/editor/CodeEditor';
 import RiskCards from '../components/dashboard/RiskCard';
@@ -97,9 +98,12 @@ int main() {
 };
 
 export default function Analyze() {
-  const [code, setCode] = useState(SAMPLE_CODES.Python);
-  const [language, setLanguage] = useState('Python');
-  const [filename, setFilename] = useState('main.py');
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const [code, setCode] = useState(() => location.state?.code || SAMPLE_CODES.Python);
+  const [language, setLanguage] = useState(() => location.state?.language || 'Python');
+  const [filename, setFilename] = useState(() => location.state?.filename || 'main.py');
   const [status, setStatus] = useState('initial'); // 'initial' | 'analyzing' | 'completed'
   const [result, setResult] = useState(null);
   const [isStale, setIsStale] = useState(false);
@@ -162,7 +166,17 @@ export default function Analyze() {
     reader.readAsText(file);
   };
 
-  const triggerAnalysis = async (codeToAnalyze = code, langToAnalyze = language, fileToSave = filename) => {
+  const saveToHistory = useCallback((entry) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('analyzer_history') || '[]');
+      const updated = [entry, ...existing].slice(0, 50);
+      localStorage.setItem('analyzer_history', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save history', e);
+    }
+  }, []);
+
+  const triggerAnalysis = useCallback(async (codeToAnalyze = code, langToAnalyze = language, fileToSave = filename) => {
     setStatus('analyzing');
     setIsStale(false);
     setError(null);
@@ -186,24 +200,39 @@ export default function Analyze() {
         complexity: analysisResult.metrics.cyclomaticComplexity,
         maintainability: `${analysisResult.metrics.maintainabilityGrade} (${analysisResult.metrics.maintainabilityIndex})`,
         status: 'Success',
-        codeSnippet: codeToAnalyze.slice(0, 150)
+        codeSnippet: codeToAnalyze.slice(0, 150),
+        code: codeToAnalyze,
       });
     } catch (err) {
       console.error(err);
       setError(err.message || 'Analysis failed.');
       setStatus('initial');
     }
-  };
+  }, [code, language, filename, saveToHistory]);
 
-  const saveToHistory = (entry) => {
-    try {
-      const existing = JSON.parse(localStorage.getItem('analyzer_history') || '[]');
-      const updated = [entry, ...existing].slice(0, 50);
-      localStorage.setItem('analyzer_history', JSON.stringify(updated));
-    } catch (e) {
-      console.error('Failed to save history', e);
+  // Handle rerunning or loading code snippet from history navigation
+  useEffect(() => {
+    if (location.state?.code) {
+      const incomingCode = location.state.code;
+      const incomingLang = location.state.language || 'Python';
+      const incomingFile = location.state.filename || (incomingLang === 'Python' ? 'main.py' : 'snippet.txt');
+      const shouldAutoRun = location.state.autoRun;
+
+      setCode(incomingCode);
+      setLanguage(incomingLang);
+      setFilename(incomingFile);
+      setResult(null);
+      setIsStale(false);
+      setError(null);
+
+      // Clear the navigation state so reload doesn't repeatedly retrigger
+      navigate(location.pathname, { replace: true, state: {} });
+
+      if (shouldAutoRun) {
+        triggerAnalysis(incomingCode, incomingLang, incomingFile);
+      }
     }
-  };
+  }, [location.state, location.pathname, navigate, triggerAnalysis]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12">
