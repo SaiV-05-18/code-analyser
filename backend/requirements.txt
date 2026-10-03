@@ -4,3 +4,4 @@ pydantic>=2.8.0
 radon>=6.0.1
 bandit>=1.7.0
 flake8>=7.0.0
+types-pyflakes>=3.4.0
