@@ -16,11 +16,20 @@ export async function analyzeCode(code, language) {
     body: JSON.stringify({ code, language }),
   });
 
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error(
+      `Server returned HTTP ${response.status} (${response.statusText || 'Unable to parse server response'}). Ensure backend is running at http://127.0.0.1:8000.`
+    );
+  }
 
   if (!response.ok) {
     let errorMessage = data?.detail || 'Analysis request failed.';
-    if (typeof errorMessage === 'object') {
+    if (Array.isArray(errorMessage)) {
+      errorMessage = errorMessage.map((e) => e.msg || e.message || JSON.stringify(e)).join('; ');
+    } else if (typeof errorMessage === 'object' && errorMessage !== null) {
       errorMessage = errorMessage.message
         ? `${errorMessage.message}${errorMessage.line ? ` (Line ${errorMessage.line})` : ''}`
         : JSON.stringify(errorMessage);

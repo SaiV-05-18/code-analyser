@@ -38,7 +38,7 @@ def run_bandit_scan(code: str) -> list:
     issues = []
     tmp_path = None
     try:
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp_file:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, encoding="utf-8") as tmp_file:
             tmp_file.write(code)
             tmp_path = tmp_file.name
 
@@ -53,13 +53,15 @@ def run_bandit_scan(code: str) -> list:
                 if hasattr(item, "fname_and_line_number_tuple") and item.fname_and_line_number_tuple
                 else getattr(item, "lineno", 1)
             )
+            text_desc = getattr(item, "text", "")
             issues.append({
                 "id": getattr(item, "test_id", "B000"),
-                "title": getattr(item, "text", ""),
+                "title": text_desc,
+                "message": text_desc,
                 "severity": item.severity.capitalize() if hasattr(item, "severity") else "Medium",
                 "confidence": item.confidence.capitalize() if hasattr(item, "confidence") else "High",
                 "line": line_no,
-                "description": getattr(item, "text", "")
+                "description": text_desc
             })
     except Exception:
         pass
@@ -83,7 +85,8 @@ def run_flake8_scan(code: str) -> list:
                     "rule": "W0702",
                     "severity": "Warning",
                     "line": node.lineno,
-                    "description": "No exception type(s) specified (bare 'except:')"
+                    "description": "No exception type(s) specified (bare 'except:')",
+                    "message": "W0702: No exception type(s) specified (bare 'except:')"
                 })
     except Exception:
         pass
@@ -182,15 +185,12 @@ def analyze_code(code: str) -> dict:
         avg_cc = max(1, 1 + branch_count + loop_count)
         cc_grade = cc_rank(avg_cc)
 
-    complexity_rating_map = {
-        'A': 'Low (Simple)',
-        'B': 'Low to Moderate',
-        'C': 'Moderate',
-        'D': 'High (Complex)',
-        'E': 'Very High (Risk)',
-        'F': 'Extreme Risk'
-    }
-    complexity_rating = complexity_rating_map.get(cc_grade, 'Low')
+    if cc_grade in ('A', 'B'):
+        complexity_rating = 'Low'
+    elif cc_grade == 'C':
+        complexity_rating = 'Medium'
+    else:
+        complexity_rating = 'High'
 
     # 4. Maintainability Index via Radon
     try:

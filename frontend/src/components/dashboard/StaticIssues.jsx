@@ -66,7 +66,7 @@ export default function StaticIssues({ securityIssues = [], styleIssues = [] }) 
                       {issue.severity}
                     </span>
                   </div>
-                  <p className="text-slate-800 font-medium text-xs leading-relaxed">{issue.message}</p>
+                  <p className="text-slate-800 font-medium text-xs leading-relaxed">{issue.message || issue.description || issue.title}</p>
                 </div>
               ))
             )}
@@ -110,7 +110,7 @@ export default function StaticIssues({ securityIssues = [], styleIssues = [] }) 
                       {issue.severity}
                     </span>
                   </div>
-                  <p className="text-slate-800 font-medium text-xs leading-relaxed">{issue.message}</p>
+                  <p className="text-slate-800 font-medium text-xs leading-relaxed">{issue.message || issue.description || issue.title}</p>
                 </div>
               ))
             )}

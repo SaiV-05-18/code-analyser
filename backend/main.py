@@ -56,10 +56,11 @@ def analyze(request: AnalyzeRequest) -> Dict[str, Any]:
         result = analyze_code(request.code)
         return result
     except CodeAnalysisError as err:
+        error_type = "SyntaxError" if err.line is not None else "ValidationError"
         raise HTTPException(
             status_code=getattr(status, "HTTP_422_UNPROCESSABLE_CONTENT", 422),
             detail={
-                "error": "SyntaxError",
+                "error": error_type,
                 "message": err.message,
                 "line": err.line,
                 "offset": err.offset,
