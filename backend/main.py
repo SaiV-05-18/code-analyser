@@ -57,7 +57,7 @@ def analyze(request: AnalyzeRequest) -> Dict[str, Any]:
         return result
     except CodeAnalysisError as err:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=getattr(status, "HTTP_422_UNPROCESSABLE_CONTENT", 422),
             detail={
                 "error": "SyntaxError",
                 "message": err.message,

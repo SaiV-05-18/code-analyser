@@ -1,0 +1,14 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "include": [
+    "backend",
+    "ml"
+  ],
+  "extraPaths": [
+    ".",
+    "backend",
+    "backend/venv/lib/python3.14/site-packages",
+    "/home/SaiV-05-18/.local/lib/python3.14/site-packages"
+  ]
+}
