@@ -1,32 +1,22 @@
-"""Formal Code Analyzer module for Python source code using AST, Radon, Bandit, and Flake8.
-
-Features:
-  - In-memory AST structural extraction (functions, branches, loops, variables, nesting depth).
-  - Formal complexity & maintainability indexing via Radon.
-  - Programmatic in-memory security scanning via Bandit.
-  - Safe in-memory PEP 8 and lint analysis via Flake8 (pycodestyle & pyflakes).
-"""
-
 import ast
 import io
 import os
 import tempfile
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Optional
+import joblib
+import numpy as np
 
-from radon.complexity import average_complexity, cc_rank, cc_visit
-from radon.metrics import mi_rank, mi_visit
+from radon.complexity import cc_visit, cc_rank
+from radon.metrics import mi_visit, mi_rank
 from radon.raw import analyze as radon_raw_analyze
 
 from bandit.core import config as b_config
 from bandit.core import manager as b_manager
-import pycodestyle
-import pyflakes.api
-import pyflakes.reporter
+from flake8.api import legacy as flake8_legacy
 
 
-class CodeAnalysisError(Exception):
+class CodeAnalysisError(ValueError):
     """Raised when source code analysis fails due to syntax or parsing errors."""
 
     def __init__(self, message: str, line: Optional[int] = None, offset: Optional[int] = None):
@@ -36,102 +26,19 @@ class CodeAnalysisError(Exception):
         self.offset = offset
 
 
-# Global in-memory cache for the serialized Machine Learning defect model
-_DEFECT_MODEL: Optional[Any] = None
-MODEL_PATH = Path(__file__).resolve().parent / "defect_model.joblib"
-
-
-def get_defect_model() -> Optional[Any]:
-    """Returns the cached RandomForest model, loading it into memory on demand."""
-    global _DEFECT_MODEL
-    if _DEFECT_MODEL is not None:
-        return _DEFECT_MODEL
-
-    if MODEL_PATH.is_file():
-        try:
-            import joblib
-            loaded = joblib.load(MODEL_PATH)
-            if isinstance(loaded, dict) and "model" in loaded:
-                _DEFECT_MODEL = loaded["model"]
-            else:
-                _DEFECT_MODEL = loaded
-        except Exception:
-            _DEFECT_MODEL = None
-
-    return _DEFECT_MODEL
-
-
-def predict_defect_risk(
-    loc: int,
-    cyclomatic_complexity: int,
-    maintainability_index: float,
-    branch_count: int,
-    max_nesting_depth: int,
-    security_issue_count: int,
-) -> Dict[str, Any]:
-    """Predicts defect probability and risk tier using the trained ML model or baseline fallback."""
-    model = get_defect_model()
-
-    if model is not None:
-        try:
-            features = [[
-                float(loc),
-                float(cyclomatic_complexity),
-                float(maintainability_index),
-                float(branch_count),
-                float(max_nesting_depth),
-                float(security_issue_count),
-            ]]
-            probabilities = model.predict_proba(features)[0]
-
-            if hasattr(model, "classes_") and 1 in model.classes_:
-                idx = list(model.classes_).index(1)
-                defect_prob = float(probabilities[idx])
-            else:
-                defect_prob = float(probabilities[-1])
-
-            prob_percent = int(round(defect_prob * 100))
-            prob_percent = max(1, min(99, prob_percent))
-            risk_level = "High" if prob_percent > 60 else ("Medium" if prob_percent > 30 else "Low")
-
-            return {
-                "probability": prob_percent,
-                "class": f"Defect Risk ({risk_level})",
-                "risk": risk_level,
-                "model": "RandomForestClassifier",
-            }
-        except Exception:
-            # Fall back cleanly to baseline heuristic on inference error
-            pass
-
-    # Pipeline Fallback: Baseline heuristic formula
-    risk_score = 5
-    if cyclomatic_complexity > 10:
-        risk_score += min(35, (cyclomatic_complexity - 10) * 4)
-    if maintainability_index < 65:
-        risk_score += min(35, (65 - maintainability_index))
-    if max_nesting_depth > 3:
-        risk_score += min(10, (max_nesting_depth - 3) * 3)
-    if security_issue_count > 0:
-        risk_score += min(30, security_issue_count * 15)
-
-    risk_score = min(95, int(risk_score))
-    risk_level = "High" if risk_score > 60 else ("Medium" if risk_score > 30 else "Low")
-
-    return {
-        "probability": risk_score,
-        "class": f"Defect Risk ({risk_level})",
-        "risk": risk_level,
-        "model": "Heuristic Baseline (Fallback)",
-    }
+# Load pre-trained Defect Prediction Model
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "defect_model.joblib")
+try:
+    DEFECT_MODEL = joblib.load(MODEL_PATH)
+except Exception:
+    DEFECT_MODEL = None
 
 
 def run_bandit_scan(code: str) -> list:
-    """Runs Bandit security analysis on a temporary source file and returns structured issues."""
     issues = []
     tmp_path = None
     try:
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, encoding="utf-8") as tmp_file:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp_file:
             tmp_file.write(code)
             tmp_path = tmp_file.name
 
@@ -141,25 +48,20 @@ def run_bandit_scan(code: str) -> list:
         mgr.run_tests()
 
         for item in mgr.get_issue_list():
-            line_no = getattr(item, "lineno", None)
-            if line_no is None and hasattr(item, "fname_and_line_number_tuple"):
-                line_no = item.fname_and_line_number_tuple[1]
-            line_no = line_no or 1
-
-            severity = item.severity.capitalize() if hasattr(item, "severity") else "Medium"
-            confidence = item.confidence.capitalize() if hasattr(item, "confidence") else "High"
-
+            line_no = (
+                item.fname_and_line_number_tuple[1]
+                if hasattr(item, "fname_and_line_number_tuple") and item.fname_and_line_number_tuple
+                else getattr(item, "lineno", 1)
+            )
             issues.append({
                 "id": getattr(item, "test_id", "B000"),
-                "title": item.text,
-                "severity": severity,
-                "confidence": confidence,
+                "title": getattr(item, "text", ""),
+                "severity": item.severity.capitalize() if hasattr(item, "severity") else "Medium",
+                "confidence": item.confidence.capitalize() if hasattr(item, "confidence") else "High",
                 "line": line_no,
-                "description": item.text,
-                "message": item.text,
+                "description": getattr(item, "text", "")
             })
     except Exception:
-        # Fallback to prevent crash if security scanner encounters unexpected error
         pass
     finally:
         if tmp_path and os.path.exists(tmp_path):
@@ -172,93 +74,61 @@ def run_bandit_scan(code: str) -> list:
 
 
 def run_flake8_scan(code: str) -> list:
-    """Runs in-memory Flake8 style & linting checks (pyflakes + pycodestyle) safely without stdout hijacking."""
     style_issues = []
-
-    # 1. Pyflakes (logical linting: unused imports, undefined variables, unused locals)
-    out_buf = io.StringIO()
-    err_buf = io.StringIO()
-    reporter = pyflakes.reporter.Reporter(out_buf, err_buf)
     try:
-        pyflakes.api.check(code, "source.py", reporter)
-        for raw_line in out_buf.getvalue().splitlines():
-            raw_line = raw_line.strip()
-            if not raw_line:
-                continue
-            parts = raw_line.split(":", 3)
-            if len(parts) >= 3:
-                try:
-                    line_no = int(parts[1])
-                except (ValueError, IndexError):
-                    line_no = 1
-                msg = parts[-1].strip()
-                rule = "F401" if "imported but unused" in msg else ("F841" if "assigned to but never used" in msg else "F")
+        tree = ast.parse(code)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ExceptHandler) and node.type is None:
                 style_issues.append({
-                    "rule": rule,
+                    "rule": "W0702",
                     "severity": "Warning",
-                    "line": line_no,
-                    "description": msg,
-                    "message": f"{rule}: {msg}",
+                    "line": node.lineno,
+                    "description": "No exception type(s) specified (bare 'except:')"
                 })
     except Exception:
         pass
 
-    # 2. Pycodestyle (PEP 8 style: whitespace, blank lines, bare excepts, formatting)
-    class CustomIssueCollector(pycodestyle.BaseReport):
-        def __init__(self, options):
-            super().__init__(options)
-            self.errors = []
+    return style_issues
 
-        def error(self, line_number, offset, text, check):
-            code_id = super().error(line_number, offset, text, check)
-            if code_id:
-                desc = text[len(code_id):].strip() if text.startswith(code_id) else text
-                self.errors.append({
-                    "rule": code_id,
-                    "severity": "Warning" if code_id.startswith("W") else "Low",
-                    "line": line_number,
-                    "description": desc,
-                    "message": f"{code_id}: {desc}",
-                })
-            return code_id
 
-    try:
-        style_guide = pycodestyle.StyleGuide(
-            reporter=CustomIssueCollector,
-            ignore=["E501"],  # Line length optional
-            quiet=True,
-        )
-        lines = code.splitlines(True)
-        style_guide.input_file("source.py", lines=lines)
-        if hasattr(style_guide.options, "report") and hasattr(style_guide.options.report, "errors"):
-            style_issues.extend(style_guide.options.report.errors)
-    except Exception:
-        pass
-
-    # 3. Fallback AST inspection for bare excepts if no issues collected
-    if not style_issues:
+def predict_defect_risk(features: list) -> tuple:
+    """
+    Feeds features [loc, cc, mi, branches, nesting, security_count] to RandomForest.
+    Returns (probability_percentage: int, risk_level: str)
+    """
+    if DEFECT_MODEL is not None:
         try:
-            tree = ast.parse(code)
-            for node in ast.walk(tree):
-                if isinstance(node, ast.ExceptHandler) and node.type is None:
-                    style_issues.append({
-                        "rule": "E722",
-                        "severity": "Warning",
-                        "line": node.lineno,
-                        "description": "No exception type specified (bare 'except:')",
-                        "message": "E722: No exception type specified (bare 'except:')",
-                    })
+            X = np.array([features])
+            # Probability of defect class (index 1)
+            prob = DEFECT_MODEL.predict_proba(X)[0][1]
+            prob_percent = int(round(prob * 100))
+            prob_percent = max(5, min(98, prob_percent))
+            risk_level = "High" if prob_percent >= 60 else ("Medium" if prob_percent >= 30 else "Low")
+            return prob_percent, risk_level
         except Exception:
             pass
 
-    return style_issues
+    # Heuristic fallback if model not loaded
+    loc, cc, mi, branches, nesting, security_count = features
+    score = 5
+    if cc > 10:
+        score += min(35, (cc - 10) * 4)
+    if mi < 65:
+        score += min(35, int(65 - mi))
+    if nesting > 3:
+        score += min(10, (nesting - 3) * 3)
+    if security_count > 0:
+        score += min(30, security_count * 15)
+    score = min(95, score)
+    level = "High" if score > 60 else ("Medium" if score > 30 else "Low")
+    return score, level
 
 
 def analyze_code(code: str) -> dict:
     if not code or not code.strip():
         raise CodeAnalysisError("Source code cannot be empty.")
 
-    # 1. AST Validation & Structural Extraction
+    # 1. AST Structural Metrics
     try:
         tree = ast.parse(code)
     except SyntaxError as e:
@@ -270,26 +140,15 @@ def analyze_code(code: str) -> dict:
 
     functions = [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
     function_count = len(functions)
-
     branch_count = sum(1 for n in ast.walk(tree) if isinstance(n, (ast.If, ast.IfExp)))
     loop_count = sum(1 for n in ast.walk(tree) if isinstance(n, (ast.For, ast.AsyncFor, ast.While)))
-
     variables = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Store)}
     variable_count = len(variables)
 
     def get_max_depth(node, current_depth=0):
         block_types = (
-            ast.FunctionDef,
-            ast.AsyncFunctionDef,
-            ast.ClassDef,
-            ast.For,
-            ast.AsyncFor,
-            ast.While,
-            ast.If,
-            ast.Try,
-            ast.With,
-            ast.AsyncWith,
-            ast.ExceptHandler,
+            ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef,
+            ast.For, ast.AsyncFor, ast.While, ast.If, ast.Try, ast.With
         )
         new_depth = current_depth + 1 if isinstance(node, block_types) else current_depth
         max_d = new_depth
@@ -304,47 +163,36 @@ def analyze_code(code: str) -> dict:
         raw_metrics = radon_raw_analyze(code)
         loc = raw_metrics.loc
         sloc = raw_metrics.sloc
-        comments = raw_metrics.comments + getattr(raw_metrics, "multi", 0)
-        comment_density = round((comments / max(1, loc)) * 100, 1) if loc > 0 else 0.0
+        comments = raw_metrics.comments
+        comment_density = round((comments / loc) * 100, 1) if loc > 0 else 0.0
     except Exception:
         lines = code.splitlines()
         loc = len(lines)
         sloc = len([l for l in lines if l.strip()])
         comments = sum(1 for l in lines if l.strip().startswith("#"))
-        comment_density = round((comments / max(1, loc)) * 100, 1) if loc > 0 else 0.0
+        comment_density = round((comments / loc) * 100, 1) if loc > 0 else 0.0
 
     # 3. Cyclomatic Complexity via Radon
     complexity_blocks = cc_visit(code)
-    formatted_blocks = []
     if complexity_blocks:
         total_cc = sum(block.complexity for block in complexity_blocks)
         avg_cc = max(1, round(total_cc / len(complexity_blocks)))
-        peak_cc = max(block.complexity for block in complexity_blocks)
-        cyclomatic_complexity = peak_cc
-        cc_grade = cc_rank(cyclomatic_complexity)
-
-        for b in complexity_blocks:
-            formatted_blocks.append({
-                "name": b.name,
-                "complexity": b.complexity,
-                "rank": cc_rank(b.complexity),
-                "line": b.lineno,
-                "type": getattr(b, "letter", "F"),
-            })
+        cc_grade = cc_rank(avg_cc)
     else:
-        cyclomatic_complexity = max(1, 1 + branch_count + loop_count)
-        avg_cc = cyclomatic_complexity
-        cc_grade = cc_rank(cyclomatic_complexity)
+        avg_cc = max(1, 1 + branch_count + loop_count)
+        cc_grade = cc_rank(avg_cc)
 
-    # Map Radon rank to frontend ratings: Low (A/B), Medium (C), High (D/E/F)
-    if cyclomatic_complexity <= 5:
-        complexity_rating = "Low"
-    elif cyclomatic_complexity <= 10:
-        complexity_rating = "Medium"
-    else:
-        complexity_rating = "High"
+    complexity_rating_map = {
+        'A': 'Low (Simple)',
+        'B': 'Low to Moderate',
+        'C': 'Moderate',
+        'D': 'High (Complex)',
+        'E': 'Very High (Risk)',
+        'F': 'Extreme Risk'
+    }
+    complexity_rating = complexity_rating_map.get(cc_grade, 'Low')
 
-    # 4. Formal Maintainability Index via Radon (Halstead volume calculation)
+    # 4. Maintainability Index via Radon
     try:
         raw_mi = mi_visit(code, multi=True)
         maintainability_index = max(0, min(100, round(raw_mi)))
@@ -353,68 +201,62 @@ def analyze_code(code: str) -> dict:
         maintainability_index = 100
         maintainability_grade = "A"
 
-    if maintainability_index >= 70:
-        maintainability_rating = "High"
-    elif maintainability_index >= 50:
-        maintainability_rating = "Moderate"
-    else:
-        maintainability_rating = "Low"
+    maintainability_rating_map = {
+        'A': 'High (Maintainable)',
+        'B': 'Medium',
+        'C': 'Low (Needs Refactoring)'
+    }
+    maintainability_rating = maintainability_rating_map.get(maintainability_grade, 'Medium')
 
     # 5. Security & Style Scans
     security_issues = run_bandit_scan(code)
     style_issues = run_flake8_scan(code)
 
-    # 6. Defect Risk Prediction (Machine Learning with Heuristic Fallback)
-    prediction_result = predict_defect_risk(
-        loc=loc,
-        cyclomatic_complexity=cyclomatic_complexity,
-        maintainability_index=maintainability_index,
-        branch_count=branch_count,
-        max_nesting_depth=max_nesting_depth,
-        security_issue_count=len(security_issues),
-    )
+    # 6. ML Defect Prediction
+    feature_vector = [
+        loc,
+        avg_cc,
+        maintainability_index,
+        branch_count,
+        max_nesting_depth,
+        len(security_issues)
+    ]
+    defect_probability, defect_risk_level = predict_defect_risk(feature_vector)
 
     recommendations = []
     if security_issues:
-        recommendations.append(f"Found {len(security_issues)} security warning(s). Review vulnerabilities highlighted in the security table.")
-    if cyclomatic_complexity > 10:
-        recommendations.append(f"Peak Cyclomatic Complexity is {cyclomatic_complexity} (Radon Rank '{cc_grade}'). Decompose complex functions into smaller modular units.")
+        recommendations.append(f"Detected {len(security_issues)} security warning(s). Review vulnerabilities highlighted in the security table.")
+    if avg_cc > 10:
+        recommendations.append(f"Average Cyclomatic Complexity is {avg_cc}. Decompose complex functions into smaller modular units.")
     if maintainability_index < 60:
-        recommendations.append(f"Maintainability Index is low ({maintainability_index}/100, Grade '{maintainability_grade}'). Simplify nested logic and reduce expressions.")
+        recommendations.append(f"Maintainability Index is low ({maintainability_index}/100). Simplify nested logic.")
     if not recommendations:
-        recommendations.append("Code structure is clean and within healthy complexity and security thresholds.")
+        recommendations.append("Code structure is clean and within healthy complexity and defect risk thresholds.")
 
     return {
         "metrics": {
             "loc": loc,
             "sloc": sloc,
             "functionCount": function_count,
-            "function_count": function_count,
             "branchCount": branch_count,
-            "branch_count": branch_count,
             "loopCount": loop_count,
-            "loop_count": loop_count,
             "commentCount": comments,
-            "comment_count": comments,
             "commentDensity": comment_density,
-            "comment_density": comment_density,
             "variableCount": variable_count,
-            "variable_count": variable_count,
             "maxNestingDepth": max_nesting_depth,
-            "max_nesting_depth": max_nesting_depth,
-            "cyclomaticComplexity": cyclomatic_complexity,
-            "cyclomatic_complexity": cyclomatic_complexity,
-            "averageComplexity": avg_cc,
-            "radonRank": cc_grade,
+            "cyclomaticComplexity": avg_cc,
             "complexityRating": complexity_rating,
             "maintainabilityIndex": maintainability_index,
             "maintainabilityGrade": maintainability_grade,
-            "maintainabilityRating": maintainability_rating,
-            "complexityBlocks": formatted_blocks,
+            "maintainabilityRating": maintainability_rating
         },
-        "prediction": prediction_result,
+        "prediction": {
+            "probability": defect_probability,
+            "class": f"Defect Risk ({defect_risk_level})",
+            "risk": defect_risk_level
+        },
         "securityIssues": security_issues,
         "styleIssues": style_issues,
         "recommendations": recommendations,
-        "analyzedAt": datetime.now(timezone.utc).isoformat(),
+        "analyzedAt": datetime.now(timezone.utc).isoformat()
     }
