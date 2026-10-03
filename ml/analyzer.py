@@ -12,6 +12,7 @@ import io
 import os
 import tempfile
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from radon.complexity import average_complexity, cc_rank, cc_visit
@@ -33,6 +34,96 @@ class CodeAnalysisError(Exception):
         self.message = message
         self.line = line
         self.offset = offset
+
+
+# Global in-memory cache for the serialized Machine Learning defect model
+_DEFECT_MODEL: Optional[Any] = None
+MODEL_PATH = Path(__file__).resolve().parent / "defect_model.joblib"
+
+
+def get_defect_model() -> Optional[Any]:
+    """Returns the cached RandomForest model, loading it into memory on demand."""
+    global _DEFECT_MODEL
+    if _DEFECT_MODEL is not None:
+        return _DEFECT_MODEL
+
+    if MODEL_PATH.is_file():
+        try:
+            import joblib
+            loaded = joblib.load(MODEL_PATH)
+            if isinstance(loaded, dict) and "model" in loaded:
+                _DEFECT_MODEL = loaded["model"]
+            else:
+                _DEFECT_MODEL = loaded
+        except Exception:
+            _DEFECT_MODEL = None
+
+    return _DEFECT_MODEL
+
+
+def predict_defect_risk(
+    loc: int,
+    cyclomatic_complexity: int,
+    maintainability_index: float,
+    branch_count: int,
+    max_nesting_depth: int,
+    security_issue_count: int,
+) -> Dict[str, Any]:
+    """Predicts defect probability and risk tier using the trained ML model or baseline fallback."""
+    model = get_defect_model()
+
+    if model is not None:
+        try:
+            features = [[
+                float(loc),
+                float(cyclomatic_complexity),
+                float(maintainability_index),
+                float(branch_count),
+                float(max_nesting_depth),
+                float(security_issue_count),
+            ]]
+            probabilities = model.predict_proba(features)[0]
+
+            if hasattr(model, "classes_") and 1 in model.classes_:
+                idx = list(model.classes_).index(1)
+                defect_prob = float(probabilities[idx])
+            else:
+                defect_prob = float(probabilities[-1])
+
+            prob_percent = int(round(defect_prob * 100))
+            prob_percent = max(1, min(99, prob_percent))
+            risk_level = "High" if prob_percent > 60 else ("Medium" if prob_percent > 30 else "Low")
+
+            return {
+                "probability": prob_percent,
+                "class": f"Defect Risk ({risk_level})",
+                "risk": risk_level,
+                "model": "RandomForestClassifier",
+            }
+        except Exception:
+            # Fall back cleanly to baseline heuristic on inference error
+            pass
+
+    # Pipeline Fallback: Baseline heuristic formula
+    risk_score = 5
+    if cyclomatic_complexity > 10:
+        risk_score += min(35, (cyclomatic_complexity - 10) * 4)
+    if maintainability_index < 65:
+        risk_score += min(35, (65 - maintainability_index))
+    if max_nesting_depth > 3:
+        risk_score += min(10, (max_nesting_depth - 3) * 3)
+    if security_issue_count > 0:
+        risk_score += min(30, security_issue_count * 15)
+
+    risk_score = min(95, int(risk_score))
+    risk_level = "High" if risk_score > 60 else ("Medium" if risk_score > 30 else "Low")
+
+    return {
+        "probability": risk_score,
+        "class": f"Defect Risk ({risk_level})",
+        "risk": risk_level,
+        "model": "Heuristic Baseline (Fallback)",
+    }
 
 
 def run_bandit_scan(code: str) -> list:
@@ -273,19 +364,15 @@ def analyze_code(code: str) -> dict:
     security_issues = run_bandit_scan(code)
     style_issues = run_flake8_scan(code)
 
-    # 6. Defect Risk Calculation (Aggregated with Security Findings)
-    risk_score = 5
-    if cyclomatic_complexity > 10:
-        risk_score += min(35, (cyclomatic_complexity - 10) * 4)
-    if maintainability_index < 65:
-        risk_score += min(35, (65 - maintainability_index))
-    if max_nesting_depth > 3:
-        risk_score += min(10, (max_nesting_depth - 3) * 3)
-    if len(security_issues) > 0:
-        risk_score += min(30, len(security_issues) * 15)
-
-    risk_score = min(95, int(risk_score))
-    risk_level = "High" if risk_score > 60 else ("Medium" if risk_score > 30 else "Low")
+    # 6. Defect Risk Prediction (Machine Learning with Heuristic Fallback)
+    prediction_result = predict_defect_risk(
+        loc=loc,
+        cyclomatic_complexity=cyclomatic_complexity,
+        maintainability_index=maintainability_index,
+        branch_count=branch_count,
+        max_nesting_depth=max_nesting_depth,
+        security_issue_count=len(security_issues),
+    )
 
     recommendations = []
     if security_issues:
@@ -325,11 +412,7 @@ def analyze_code(code: str) -> dict:
             "maintainabilityRating": maintainability_rating,
             "complexityBlocks": formatted_blocks,
         },
-        "prediction": {
-            "probability": risk_score,
-            "class": f"Defect Risk ({risk_level})",
-            "risk": risk_level,
-        },
+        "prediction": prediction_result,
         "securityIssues": security_issues,
         "styleIssues": style_issues,
         "recommendations": recommendations,
